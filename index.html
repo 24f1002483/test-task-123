@@ -7,80 +7,90 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            text-align: center;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
             background-color: #f0f0f0;
         }
-        
-        #captcha-container {
-            width: 50%;
-            margin: 0 auto;
-            padding: 20px;
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        
+
         #captcha-image {
-            width: 100%;
+            width: 200px;
             height: auto;
             margin-bottom: 20px;
         }
-        
+
         #captcha-text {
             font-size: 24px;
             font-weight: bold;
             color: #00698f;
         }
-        
-        #loading {
+
+        #error-message {
+            color: #ff0000;
             font-size: 18px;
-            color: #666;
         }
     </style>
 </head>
 <body>
     <div id="captcha-container">
-        <img id="captcha-image" src=""
-             width="500" height="200">
+        <img id="captcha-image" src="" alt="Captcha Image">
         <p id="captcha-text"></p>
-        <p id="loading">Loading...</p>
+        <p id="error-message"></p>
     </div>
+
     <script>
         const urlParams = new URLSearchParams(window.location.search);
-        let captchaUrl = urlParams.get('url') || 'https://picsum.photos/seed/picsum/500/200';
-        
-        fetch(captchaUrl)
-            .then(response => response.blob())
-            .then(blob => {
-                const captchaImage = document.getElementById('captcha-image');
-                const reader = new FileReader();
-                reader.onload = () => {
-                    captchaImage.src = reader.result;
-                };
-                reader.readAsDataURL(blob);
-            })
-            .catch(error => console.error('Error loading captcha image:', error));
-        
-        const mockSolver = (image) => {
-            return new Promise((resolve) => {
-                setTimeout(() => resolve('Mocked captcha text'), 15000);
-            });
-        };
-        
-        const ocrSolver = async (image) => {
-            // Replace with actual OCR library integration
-            return mockSolver(image);
-        };
-        
-        const solveCaptcha = async () => {
+        let captchaUrl = urlParams.get('url');
+        if (!captchaUrl) {
+            captchaUrl = 'https://picsum.photos/200/300';
+        }
+
+        function loadCaptchaImage() {
             const captchaImage = document.getElementById('captcha-image');
-            const text = await ocrSolver(captchaImage.src);
-            document.getElementById('captcha-text').innerText = text;
-            document.getElementById('loading').style.display = 'none';
-        };
-        
-        solveCaptcha();
+            captchaImage.src = captchaUrl;
+        }
+
+        function solveCaptcha() {
+            const captchaImage = document.getElementById('captcha-image');
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            const width = captchaImage.width;
+            const height = captchaImage.height;
+            canvas.width = width;
+            canvas.height = height;
+            ctx.drawImage(captchaImage, 0, 0, width, height);
+            const dataURL = canvas.toDataURL();
+            const mockSolver = {
+                solve: () => {
+                    // Simple mock solver, replace with actual OCR library
+                    const text = 'Mock Captcha Text';
+                    return text;
+                }
+            };
+            const text = mockSolver.solve();
+            const captchaText = document.getElementById('captcha-text');
+            captchaText.textContent = text;
+        }
+
+        function checkCaptcha() {
+            const captchaImage = document.getElementById('captcha-image');
+            if (captchaImage.complete) {
+                solveCaptcha();
+                setTimeout(() => {
+                    const captchaText = document.getElementById('captcha-text');
+                    if (captchaText.textContent === '') {
+                        const errorMessage = document.getElementById('error-message');
+                        errorMessage.textContent = 'Failed to solve captcha';
+                    }
+                }, 15000);
+            } else {
+                setTimeout(checkCaptcha, 1000);
+            }
+        }
+
+        loadCaptchaImage();
+        checkCaptcha();
     </script>
 </body>
 </html>
