@@ -3,78 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CAPTCHA Solver</title>
+    <title>Captcha Solver</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             text-align: center;
+            background-color: #f0f0f0;
         }
-        #captcha {
-            margin: 20px;
+        
+        #captcha-container {
+            width: 50%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        #text {
+        
+        #captcha-image {
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        
+        #captcha-text {
             font-size: 24px;
             font-weight: bold;
-            color: #008000;
+            color: #00698f;
         }
-        #error {
-            color: #FF0000;
+        
+        #loading {
+            font-size: 18px;
+            color: #666;
         }
     </style>
 </head>
 <body>
-    <h1>CAPTCHA Solver</h1>
-    <input id="url" type="url" placeholder="Enter CAPTCHA image URL">
-    <button id="solve-btn">Solve CAPTCHA</button>
-    <div id="captcha"></div>
-    <div id="text"></div>
-    <div id="error"></div>
-
+    <div id="captcha-container">
+        <img id="captcha-image" src=""
+             width="500" height="200">
+        <p id="captcha-text"></p>
+        <p id="loading">Loading...</p>
+    </div>
     <script>
-        const urlInput = document.getElementById('url');
-        const solveBtn = document.getElementById('solve-btn');
-        const captchaDiv = document.getElementById('captcha');
-        const textDiv = document.getElementById('text');
-        const errorDiv = document.getElementById('error');
-
-        let captchaUrl = urlInput.value;
-
-        if (!captchaUrl) {
-            captchaUrl = 'https://example.com/sample-captcha.png'; // default URL
-        }
-
-        const img = document.createElement('img');
-        img.crossOrigin = 'anonymous';
-        img.src = captchaUrl;
-        captchaDiv.appendChild(img);
-
-        solveBtn.addEventListener('click', solveCaptcha);
-
-        function solveCaptcha() {
-            captchaUrl = urlInput.value;
-
-            if (!captchaUrl) {
-                errorDiv.textContent = 'Please enter a valid CAPTCHA image URL';
-                return;
-            }
-
-            const solver = new CaptchaSolver();
-            solver.solve(captchaUrl)
-                .then((text) => {
-                    textDiv.textContent = `Recognized text: ${text}`;
-                })
-                .catch((err) => {
-                    errorDiv.textContent = `Error: ${err}`;
-                });
-        }
-
-        class CaptchaSolver {
-            async solve(url) {
-                // Mock OCR solver (replace with actual OCR library)
-                await new Promise((resolve) => setTimeout(resolve, 15000)); // simulate 15 seconds delay
-                return 'Mocked CAPTCHA text';
-            }
-        }
+        const urlParams = new URLSearchParams(window.location.search);
+        let captchaUrl = urlParams.get('url') || 'https://picsum.photos/seed/picsum/500/200';
+        
+        fetch(captchaUrl)
+            .then(response => response.blob())
+            .then(blob => {
+                const captchaImage = document.getElementById('captcha-image');
+                const reader = new FileReader();
+                reader.onload = () => {
+                    captchaImage.src = reader.result;
+                };
+                reader.readAsDataURL(blob);
+            })
+            .catch(error => console.error('Error loading captcha image:', error));
+        
+        const mockSolver = (image) => {
+            return new Promise((resolve) => {
+                setTimeout(() => resolve('Mocked captcha text'), 15000);
+            });
+        };
+        
+        const ocrSolver = async (image) => {
+            // Replace with actual OCR library integration
+            return mockSolver(image);
+        };
+        
+        const solveCaptcha = async () => {
+            const captchaImage = document.getElementById('captcha-image');
+            const text = await ocrSolver(captchaImage.src);
+            document.getElementById('captcha-text').innerText = text;
+            document.getElementById('loading').style.display = 'none';
+        };
+        
+        solveCaptcha();
     </script>
 </body>
 </html>
