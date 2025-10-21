@@ -7,28 +7,25 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
+            text-align: center;
         }
-
+        #captcha-container {
+            display: inline-block;
+            margin: 20px;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
         #captcha-image {
-            width: 200px;
-            height: auto;
-            margin-bottom: 20px;
+            width: 300px;
+            height: 100px;
+            margin: 10px;
         }
-
         #captcha-text {
             font-size: 24px;
             font-weight: bold;
-            color: #00698f;
-        }
-
-        #error-message {
-            color: #ff0000;
-            font-size: 18px;
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -37,60 +34,39 @@
         <img id="captcha-image" src="" alt="Captcha Image">
         <p id="captcha-text"></p>
         <p id="error-message"></p>
+        <div id="spinner" style="display: none;"><i class="fa fa-spinner fa-spin"></i></div>
     </div>
 
-    <script>
-        const urlParams = new URLSearchParams(window.location.search);
-        let captchaUrl = urlParams.get('url');
-        if (!captchaUrl) {
-            captchaUrl = 'https://picsum.photos/200/300';
-        }
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.4/tesseract.min.js"></script>
+    <script src="https://use.fontawesome.com/releases/v5.15.4/js/all.min.js"></script>
 
-        function loadCaptchaImage() {
-            const captchaImage = document.getElementById('captcha-image');
-            captchaImage.src = captchaUrl;
-        }
+    <script>
+        const urlParam = new URLSearchParams(window.location.search);
+        const captchaUrl = urlParam.get('url') || 'https://raw.githubusercontent.com/tesseract-ocr/tesseract/master/doc/fontconfig/eng.traineddata.png';
+        const spinner = $('#spinner');
 
         function solveCaptcha() {
-            const captchaImage = document.getElementById('captcha-image');
-            const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
-            const width = captchaImage.width;
-            const height = captchaImage.height;
-            canvas.width = width;
-            canvas.height = height;
-            ctx.drawImage(captchaImage, 0, 0, width, height);
-            const dataURL = canvas.toDataURL();
-            const mockSolver = {
-                solve: () => {
-                    // Simple mock solver, replace with actual OCR library
-                    const text = 'Mock Captcha Text';
-                    return text;
-                }
-            };
-            const text = mockSolver.solve();
-            const captchaText = document.getElementById('captcha-text');
-            captchaText.textContent = text;
+            spinner.show();
+            $('#captcha-text').text('');
+            $('#captcha-image').attr('src', captchaUrl);
+            Tesseract.recognize(
+                $('#captcha-image')[0],
+                'eng',
+                { logger: m => console.log(m) }
+            ).then(({ data: { text } }) => {
+                spinner.hide();
+                $('#captcha-text').text(text);
+            }).catch(() => {
+                spinner.hide();
+                $('#error-message').text('Failed to solve captcha');
+            });
         }
 
-        function checkCaptcha() {
-            const captchaImage = document.getElementById('captcha-image');
-            if (captchaImage.complete) {
-                solveCaptcha();
-                setTimeout(() => {
-                    const captchaText = document.getElementById('captcha-text');
-                    if (captchaText.textContent === '') {
-                        const errorMessage = document.getElementById('error-message');
-                        errorMessage.textContent = 'Failed to solve captcha';
-                    }
-                }, 15000);
-            } else {
-                setTimeout(checkCaptcha, 1000);
-            }
-        }
-
-        loadCaptchaImage();
-        checkCaptcha();
+        $(document).ready(() => {
+            solveCaptcha();
+            setInterval(solveCaptcha, 15000); // Solve captcha every 15 seconds
+        });
     </script>
 </body>
 </html>
