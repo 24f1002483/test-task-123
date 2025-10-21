@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Captcha Solver</title>
     <style>
@@ -9,64 +10,77 @@
             font-family: Arial, sans-serif;
             text-align: center;
         }
-        #captcha-container {
-            display: inline-block;
-            margin: 20px;
-            padding: 20px;
-            border: 1px solid #ccc;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        #captcha-image {
+        #captcha {
+            margin: 20px auto;
             width: 300px;
-            height: 100px;
-            margin: 10px;
+            height: 200px;
+            border: 1px solid #000;
         }
-        #captcha-text {
+        #result {
             font-size: 24px;
             font-weight: bold;
-            margin-bottom: 20px;
+            margin-top: 20px;
+        }
+        #error {
+            color: red;
         }
     </style>
 </head>
 <body>
-    <div id="captcha-container">
-        <img id="captcha-image" src="" alt="Captcha Image">
-        <p id="captcha-text"></p>
-        <p id="error-message"></p>
-        <div id="spinner" style="display: none;"><i class="fa fa-spinner fa-spin"></i></div>
+    <h1>Captcha Solver</h1>
+    <input id="url" type="url" placeholder="Enter image URL (or leave blank for sample image)">
+    <button id="solve">Solve</button>
+    <div id="captcha">
+        <img id="captcha-image" src="https://chart.googleapis.com/chart?chs=300x200&cht=qr&choe=UTF-8&chl=Hello%20World" alt="Captcha Image">
     </div>
-
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/2.1.4/tesseract.min.js"></script>
-    <script src="https://use.fontawesome.com/releases/v5.15.4/js/all.min.js"></script>
+    <div id="result"></div>
+    <div id="error"></div>
 
     <script>
-        const urlParam = new URLSearchParams(window.location.search);
-        const captchaUrl = urlParam.get('url') || 'https://raw.githubusercontent.com/tesseract-ocr/tesseract/master/doc/fontconfig/eng.traineddata.png';
-        const spinner = $('#spinner');
+        const url = new URL(window.location.href);
+        let captchaUrl = url.searchParams.get('url') || 'https://chart.googleapis.com/chart?chs=300x200&cht=qr&choe=UTF-8&chl=Hello%20World';
+        document.getElementById('captcha-image').src = captchaUrl;
+
+        document.getElementById('solve').addEventListener('click', solveCaptcha);
 
         function solveCaptcha() {
-            spinner.show();
-            $('#captcha-text').text('');
-            $('#captcha-image').attr('src', captchaUrl);
-            Tesseract.recognize(
-                $('#captcha-image')[0],
-                'eng',
-                { logger: m => console.log(m) }
-            ).then(({ data: { text } }) => {
-                spinner.hide();
-                $('#captcha-text').text(text);
-            }).catch(() => {
-                spinner.hide();
-                $('#error-message').text('Failed to solve captcha');
+            const ocrUrl = 'https://westus.talk.to/api/v1/ocr';
+            fetch(ocrUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    'image_url': captchaUrl,
+                    'lang': 'eng'
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('result');
+                const errorDiv = document.getElementById('error');
+                if (data.status === 'success') {
+                    resultDiv.textContent = data.text;
+                    errorDiv.textContent = '';
+                } else {
+                    errorDiv.textContent = 'Error: ' + data.message;
+                    resultDiv.textContent = '';
+                }
+            })
+            .catch(error => {
+                const errorDiv = document.getElementById('error');
+                errorDiv.textContent = 'Error: ' + error.message;
+                const resultDiv = document.getElementById('result');
+                resultDiv.textContent = '';
             });
         }
 
-        $(document).ready(() => {
-            solveCaptcha();
-            setInterval(solveCaptcha, 15000); // Solve captcha every 15 seconds
-        });
+        const timer = setInterval(() => {
+            const resultDiv = document.getElementById('result');
+            if (resultDiv.textContent !== '') {
+                clearInterval(timer);
+            }
+        }, 1000);
     </script>
 </body>
 </html>
